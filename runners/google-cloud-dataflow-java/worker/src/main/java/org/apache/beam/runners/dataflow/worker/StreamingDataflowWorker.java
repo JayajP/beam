@@ -760,7 +760,9 @@ public class StreamingDataflowWorker {
       scheduledExecutors.add(statusPageTimer);
     }
     workCommitter.start();
-    workerStatusReporter.start(options.getWindmillHarnessUpdateReportingPeriod().getMillis());
+    workerStatusReporter.start(
+        options.getWindmillHarnessUpdateReportingPeriod().getMillis(),
+        options.getPerWorkerMetricsUpdateReportingPeriodMillis());
     activeWorkRefresher.start();
   }
 

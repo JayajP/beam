@@ -28,6 +28,7 @@ import com.google.api.services.dataflow.model.WorkItemStatus;
 import com.google.api.services.dataflow.model.WorkerMessage;
 import com.google.api.services.dataflow.model.WorkerMessageResponse;
 import java.io.IOException;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -55,6 +56,7 @@ import org.apache.beam.sdk.annotations.Internal;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.annotations.VisibleForTesting;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ListMultimap;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.MultimapBuilder;
+import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.math.LongMath;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,6 +88,12 @@ public final class StreamingWorkerStatusReporter {
   private final AtomicInteger maxThreadCountOverride;
   private final ScheduledExecutorService globalWorkerUpdateReporter;
   private final ScheduledExecutorService workerMessageReporter;
+
+  // PerWorkerMetrics are sent on the WorkerMessages channel, and are sent one in every
+  // perWorkerMetricsUpdateFrequency RPC call. If 0, PerWorkerMetrics are not reported.
+  long perWorkerMetricsUpdateFrequency = 0L;
+  // Used to track the number of WorkerMessages that have been sent without PerWorkerMetrics.
+  long workerMessagesIndex = 0L;
 
   private StreamingWorkerStatusReporter(
       boolean publishCounters,
@@ -203,8 +211,12 @@ public final class StreamingWorkerStatusReporter {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  public void start(long windmillHarnessUpdateReportingPeriodMillis) {
+  public void start(
+      long windmillHarnessUpdateReportingPeriodMillis,
+      long perWorkerMetricsUpdateReportingPeriodMillis) {
     reportHarnessStartup();
+    setPerWorkerMetricsUpdateFrequency(
+        windmillHarnessUpdateReportingPeriodMillis, perWorkerMetricsUpdateReportingPeriodMillis);
     if (windmillHarnessUpdateReportingPeriodMillis > 0) {
       LOG.info(
           "Starting periodic worker status reporters. Reporting period is every {} millis.",
@@ -231,6 +243,7 @@ public final class StreamingWorkerStatusReporter {
     shutdownExecutor(workerMessageReporter);
     // one last send
     reportPeriodicWorkerUpdates();
+    this.workerMessagesIndex = this.perWorkerMetricsUpdateFrequency;
     reportPeriodicWorkerMessage();
   }
 
@@ -247,6 +260,24 @@ public final class StreamingWorkerStatusReporter {
     } catch (IOException e) {
       LOG.warn("Failed to send harness startup counter", e);
     }
+  }
+
+  // Calculates the PerWorkerMetrics reporting frequency, ensuring alignment with the
+  // WorkerMessages RPC schedule. The desired reporting period
+  // (perWorkerMetricsUpdateReportingPeriodMillis) is adjusted to the nearest multiple
+  // of the RPC interval (windmillHarnessUpdateReportingPeriodMillis).
+  private void setPerWorkerMetricsUpdateFrequency(
+      long windmillHarnessUpdateReportingPeriodMillis,
+      long perWorkerMetricsUpdateReportingPeriodMillis) {
+    if (windmillHarnessUpdateReportingPeriodMillis == 0) {
+      this.perWorkerMetricsUpdateFrequency = 0;
+      return;
+    }
+    this.perWorkerMetricsUpdateFrequency =
+        LongMath.divide(
+            perWorkerMetricsUpdateReportingPeriodMillis,
+            windmillHarnessUpdateReportingPeriodMillis,
+            RoundingMode.CEILING);
   }
 
   /** Sends counter updates to Dataflow backend. */
@@ -325,11 +356,7 @@ public final class StreamingWorkerStatusReporter {
     List<WorkerMessage> workerMessages = new ArrayList<>(2);
     workerMessages.add(createWorkerMessageForStreamingScalingReport());
 
-    if (StreamingStepMetricsContainer.getEnablePerWorkerMetrics()) {
-      Optional<WorkerMessage> metricsMsg = createWorkerMessageForPerWorkerMetrics();
-      metricsMsg.ifPresent(workerMessages::add);
-    }
-
+    createWorkerMessageForPerWorkerMetrics().ifPresent(metrics -> workerMessages.add(metrics));
     return workerMessages;
   }
 
@@ -346,6 +373,18 @@ public final class StreamingWorkerStatusReporter {
   }
 
   private Optional<WorkerMessage> createWorkerMessageForPerWorkerMetrics() {
+    if (!StreamingStepMetricsContainer.getEnablePerWorkerMetrics()
+        || perWorkerMetricsUpdateFrequency == 0) {
+      return Optional.empty();
+    }
+
+    workerMessagesIndex += 1;
+    if (workerMessagesIndex < perWorkerMetricsUpdateFrequency) {
+      return Optional.empty();
+    } else {
+      workerMessagesIndex = 0;
+    }
+
     List<PerStepNamespaceMetrics> metrics = new ArrayList<>();
     allStageInfo.get().forEach(s -> metrics.addAll(s.extractPerWorkerMetricValues()));
 
