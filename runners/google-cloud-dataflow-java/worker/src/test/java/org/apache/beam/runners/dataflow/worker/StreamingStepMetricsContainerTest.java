@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.beam.runners.dataflow.worker.MetricsToCounterUpdateConverter.Kind;
 import org.apache.beam.runners.dataflow.worker.MetricsToCounterUpdateConverter.Origin;
 import org.apache.beam.sdk.metrics.Distribution;
+import org.apache.beam.sdk.metrics.LabeledMetricNameUtils;
 import org.apache.beam.sdk.metrics.MetricName;
 import org.apache.beam.sdk.metrics.MetricsContainer;
 import org.apache.beam.sdk.metrics.NoOpCounter;
@@ -322,10 +323,11 @@ public class StreamingStepMetricsContainerTest {
     TestClock clock = new TestClock(Instant.now());
     Map<MetricName, Instant> countersByFirstStaleTime = new HashMap<>();
     ConcurrentHashMap<MetricName, AtomicLong> perWorkerCounters = new ConcurrentHashMap<>();
+    ConcurrentHashMap<MetricName, LabeledMetricNameUtils.ParsedMetricName> parsedMetricNamesCache = new ConcurrentHashMap<>();
 
     StreamingStepMetricsContainer metricsContainer =
         StreamingStepMetricsContainer.forTesting(
-            "s1", countersByFirstStaleTime, perWorkerCounters, clock);
+            "s1", countersByFirstStaleTime, perWorkerCounters, parsedMetricNamesCache, clock);
 
     MetricName counterMetricName1 = MetricName.named("BigQuerySink", "counter1-");
     MetricName counterMetricName2 = MetricName.named("BigQuerySink", "counter2-");
@@ -338,6 +340,7 @@ public class StreamingStepMetricsContainerTest {
 
     assertThat(perWorkerCounters.get(counterMetricName1).get(), equalTo(0L));
     assertThat(countersByFirstStaleTime.size(), equalTo(0));
+    assertThat(parsedMetricNamesCache.size(), equalTo(2));
 
     // At minute 1 both metrics are discovered to be zero-valued.
     updatesList = Lists.newArrayList(metricsContainer.extractPerWorkerMetricUpdates());
@@ -348,6 +351,7 @@ public class StreamingStepMetricsContainerTest {
         containsInAnyOrder(counterMetricName1, counterMetricName2));
     assertThat(
         perWorkerCounters.keySet(), containsInAnyOrder(counterMetricName1, counterMetricName2));
+    assertThat(parsedMetricNamesCache.size(), equalTo(2));
 
     // At minute 2 metric1 is zero-valued, metric2 has been updated.
     metricsContainer.getPerWorkerCounter(counterMetricName2).inc(3);
@@ -359,6 +363,7 @@ public class StreamingStepMetricsContainerTest {
     assertThat(countersByFirstStaleTime.keySet(), contains(counterMetricName1));
     assertThat(
         perWorkerCounters.keySet(), containsInAnyOrder(counterMetricName1, counterMetricName2));
+    assertThat(parsedMetricNamesCache.size(), equalTo(2));
 
     // After minute 6 metric1 is still zero valued and should be cleaned up.
     metricsContainer.getPerWorkerCounter(counterMetricName2).inc(3);
@@ -369,5 +374,7 @@ public class StreamingStepMetricsContainerTest {
 
     assertThat(countersByFirstStaleTime.size(), equalTo(0));
     assertThat(perWorkerCounters.keySet(), contains(counterMetricName2));
+
+    assertThat(parsedMetricNamesCache.size(), equalTo(1));
   }
 }

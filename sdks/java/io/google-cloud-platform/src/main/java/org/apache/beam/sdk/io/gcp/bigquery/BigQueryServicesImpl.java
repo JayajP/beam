@@ -1432,7 +1432,7 @@ public class BigQueryServicesImpl implements BigQueryServices {
               .setMaxInflightRequests(storageWriteMaxInflightRequests)
               .setMaxInflightBytes(storageWriteMaxInflightBytes)
               .setTraceId(traceId)
-              .setDefaultMissingValueInterpretation(missingValueInterpretation)
+              // .setDefaultMissingValueInterpretation(missingValueInterpretation)
               .build();
       return new StreamAppendClient() {
         private int pins = 0;

@@ -102,7 +102,7 @@ public class LabeledMetricNameUtils {
     List<String> metricNameSplit =
         Splitter.on(METRIC_NAME_DELIMITER).limit(2).splitToList(metricName);
 
-    if (metricNameSplit.size() == 0) {
+    if (metricNameSplit.size() == 0 || metricNameSplit.get(0).isEmpty()) {
       return Optional.empty();
     }
 
