@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.beam.sdk.metrics.MetricName;
 import org.apache.beam.sdk.util.HistogramData;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.primitives.ImmutableLongArray;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,8 +41,9 @@ public class LockFreeHistogramTest {
   @Test
   public void testUpdate_OverflowValues() {
     HistogramData.BucketType bucketType = HistogramData.LinearBuckets.of(0, 10, 3);
+    MetricName metricName = MetricName.named("name", "namespace");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(MetricName.named("name", "namespace"), bucketType));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
     histogram.update(35, 40, 45);
     Optional<LockFreeHistogram.Snapshot> snapshot = histogram.getSnapshotAndReset();
 
@@ -64,8 +64,9 @@ public class LockFreeHistogramTest {
   @Test
   public void testUpdate_UnderflowValues() {
     HistogramData.BucketType bucketType = HistogramData.LinearBuckets.of(100, 10, 3);
+    MetricName metricName = MetricName.named("name", "namespace");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(MetricName.named("name", "namespace"), bucketType));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
     histogram.update(35, 40, 45);
     Optional<LockFreeHistogram.Snapshot> snapshot = histogram.getSnapshotAndReset();
 
@@ -85,8 +86,9 @@ public class LockFreeHistogramTest {
   @Test
   public void testUpdate_InBoundsValues() {
     HistogramData.BucketType bucketType = HistogramData.LinearBuckets.of(0, 10, 3);
+    MetricName metricName = MetricName.named("name", "namespace");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(MetricName.named("name", "namespace"), bucketType));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
     histogram.update(5, 15, 25);
     Optional<LockFreeHistogram.Snapshot> snapshot = histogram.getSnapshotAndReset();
 
@@ -104,8 +106,9 @@ public class LockFreeHistogramTest {
   @Test
   public void testUpdate_EmptySnapshot() {
     HistogramData.BucketType bucketType = HistogramData.LinearBuckets.of(0, 10, 3);
+    MetricName metricName = MetricName.named("name", "namespace");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(MetricName.named("name", "namespace"), bucketType));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
     histogram.update(5, 15, 25);
     Optional<LockFreeHistogram.Snapshot> snapshot_1 = histogram.getSnapshotAndReset();
 
@@ -154,8 +157,9 @@ public class LockFreeHistogramTest {
     ExecutorService executor = Executors.newFixedThreadPool(numRunnables);
 
     HistogramData.BucketType bucketType = HistogramData.ExponentialBuckets.of(1, 10);
+    MetricName metricName = MetricName.named("name", "namespace");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(MetricName.named("name", "namespace"), bucketType));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
 
     List<UpdateHistogramCallable> callables = new ArrayList<>();
 

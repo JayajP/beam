@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.beam.sdk.metrics.MetricName;
 import org.apache.beam.sdk.util.HistogramData;
-import org.apache.beam.sdk.values.KV;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.collect.ImmutableList;
 import org.apache.beam.vendor.guava.v32_1_2_jre.com.google.common.primitives.ImmutableLongArray;
 import org.junit.Test;
@@ -124,7 +123,7 @@ public class MetricsToPerStepNamespaceMetricsConverterTest {
     Map<MetricName, LockFreeHistogram.Snapshot> histograms = new HashMap<>();
     MetricName invalidName2 = MetricName.named("BigQuerySink", "****");
     LockFreeHistogram nonEmptyLinearHistogram =
-        new LockFreeHistogram(KV.of(invalidName2, lienarBuckets));
+        new LockFreeHistogram(LockFreeHistogram.HistogramKey.create(invalidName2, lienarBuckets));
     nonEmptyLinearHistogram.update(-5.0);
     histograms.put(invalidName2, nonEmptyLinearHistogram.getSnapshotAndReset().get());
 
@@ -142,12 +141,14 @@ public class MetricsToPerStepNamespaceMetricsConverterTest {
     MetricName bigQueryMetric3 = MetricName.named("BigQuerySink", "zeroValue");
 
     LockFreeHistogram nonEmptyLinearHistogram =
-        new LockFreeHistogram(KV.of(bigQueryMetric1, lienarBuckets));
+        new LockFreeHistogram(
+            LockFreeHistogram.HistogramKey.create(bigQueryMetric1, lienarBuckets));
     nonEmptyLinearHistogram.update(-5.0, 15.0, 25.0, 35.0, 105.0);
     histograms.put(bigQueryMetric1, nonEmptyLinearHistogram.getSnapshotAndReset().get());
 
     LockFreeHistogram noEmptyExponentialHistogram =
-        new LockFreeHistogram(KV.of(bigQueryMetric2, exponentialBuckets));
+        new LockFreeHistogram(
+            LockFreeHistogram.HistogramKey.create(bigQueryMetric2, exponentialBuckets));
     noEmptyExponentialHistogram.update(-5.0, 15.0, 25.0, 35.0, 105.0);
     histograms.put(bigQueryMetric2, noEmptyExponentialHistogram.getSnapshotAndReset().get());
 
@@ -235,7 +236,8 @@ public class MetricsToPerStepNamespaceMetricsConverterTest {
 
     MetricName bigQueryMetric1 = MetricName.named("BigQuerySink", "baseLabel");
     LockFreeHistogram histogram =
-        new LockFreeHistogram(KV.of(bigQueryMetric1, new TestBucketType()));
+        new LockFreeHistogram(
+            LockFreeHistogram.HistogramKey.create(bigQueryMetric1, new TestBucketType()));
     histogram.update(1.0, 2.0);
     histograms.put(bigQueryMetric1, histogram.getSnapshotAndReset().get());
 
@@ -255,7 +257,8 @@ public class MetricsToPerStepNamespaceMetricsConverterTest {
 
     MetricName histogramMetricName = MetricName.named("BigQuerySink", "histogram*label2:val2;");
     LockFreeHistogram linearHistogram =
-        new LockFreeHistogram(KV.of(histogramMetricName, lienarBuckets));
+        new LockFreeHistogram(
+            LockFreeHistogram.HistogramKey.create(histogramMetricName, lienarBuckets));
     linearHistogram.update(5.0);
     histograms.put(histogramMetricName, linearHistogram.getSnapshotAndReset().get());
 
