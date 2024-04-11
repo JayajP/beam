@@ -65,6 +65,27 @@ public final class LockFreeHistogram implements Histogram {
     this.dirty = new AtomicBoolean(false);
   }
 
+  public LockFreeHistogram(HistogramKey kv) {
+    this.name = kv.metricName();
+    this.bucketType = kv.bucketType();
+    this.buckets = new AtomicLongArray(bucketType.getNumBuckets());
+    this.underflowStatistic =
+        new AtomicReference<LockFreeHistogram.OutlierStatistic>(OutlierStatistic.EMPTY);
+    this.overflowStatistic =
+        new AtomicReference<LockFreeHistogram.OutlierStatistic>(OutlierStatistic.EMPTY);
+    this.dirty = new AtomicBoolean(false);
+  }
+
+  @AutoValue
+  public abstract static class HistogramKey implements Serializable {
+    abstract MetricName metricName();
+    abstract HistogramData.BucketType bucketType();
+  
+    public static HistogramKey create(MetricName name, HistogramData.BucketType bucketType) {
+      return new AutoValue_LockFreeHistogram_HistogramKey(name, bucketType);
+    }
+  }
+
   /**
    * Represents the sum and mean of a collection of numbers. Used to represent the
    * underflow/overflow statistics of a histogram.

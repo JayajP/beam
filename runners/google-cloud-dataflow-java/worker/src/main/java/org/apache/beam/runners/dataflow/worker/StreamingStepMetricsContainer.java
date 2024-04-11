@@ -71,7 +71,7 @@ public class StreamingStepMetricsContainer implements MetricsContainer {
   private MetricsMap<MetricName, DeltaDistributionCell> distributions =
       new MetricsMap<>(DeltaDistributionCell::new);
 
-  private MetricsMap<KV<MetricName, HistogramData.BucketType>, LockFreeHistogram>
+  private MetricsMap<LockFreeHistogram.HistogramKey, LockFreeHistogram>
       perWorkerHistograms = new MetricsMap<>(LockFreeHistogram::new);
 
   private final Map<MetricName, Instant> perWorkerCountersByFirstStaleTime;
@@ -157,7 +157,7 @@ public class StreamingStepMetricsContainer implements MetricsContainer {
   public Histogram getPerWorkerHistogram(
       MetricName metricName, HistogramData.BucketType bucketType) {
     if (enablePerWorkerMetrics) {
-      return perWorkerHistograms.get(KV.of(metricName, bucketType));
+      return perWorkerHistograms.get(LockFreeHistogram.HistogramKey.create(metricName, bucketType));
     } else {
       return MetricsContainer.super.getPerWorkerHistogram(metricName, bucketType);
     }
@@ -293,7 +293,7 @@ public class StreamingStepMetricsContainer implements MetricsContainer {
         });
     perWorkerHistograms.forEach(
         (k, v) -> {
-          v.getSnapshotAndReset().ifPresent(snapshot -> histograms.put(k.getKey(), snapshot));
+          v.getSnapshotAndReset().ifPresent(snapshot -> histograms.put(k.metricName(), snapshot));
         });
 
     deleteStaleCounters(currentZeroValuedCounters, Instant.now(clock));
