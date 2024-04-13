@@ -125,17 +125,17 @@ public class BigQuerySinkMetrics {
    * @param c Retry manager context, used to get the operation start and end time.
    * @param method StorageWriteAPI write method.
    */
-  private static void updateRpcLatencyMetric(@Nonnull Context<?> c, RpcMethod method) {
-    @Nullable Instant operationStartTime = c.getOperationStartTime();
-    @Nullable Instant operationEndTime = c.getOperationEndTime();
-    if (operationStartTime == null || operationEndTime == null) {
-      return;
-    }
-    long timeElapsed = java.time.Duration.between(operationStartTime, operationEndTime).toMillis();
-    if (timeElapsed > 0) {
-      BigQuerySinkMetrics.createRPCLatencyHistogram(method).update(timeElapsed);
-    }
-  }
+  // private static void updateRpcLatencyMetric(@Nonnull Context<?> c, RpcMethod method) {
+  //   @Nullable Instant operationStartTime = c.getOperationStartTime();
+  //   @Nullable Instant operationEndTime = c.getOperationEndTime();
+  //   if (operationStartTime == null || operationEndTime == null) {
+  //     return;
+  //   }
+  //   long timeElapsed = java.time.Duration.between(operationStartTime, operationEndTime).toMillis();
+  //   if (timeElapsed > 0) {
+  //     BigQuerySinkMetrics.createRPCLatencyHistogram(method).update(timeElapsed);
+  //   }
+  // }
 
   /**
    * @param rowStatus Status of these BigQuery rows.
@@ -211,7 +211,7 @@ public class BigQuerySinkMetrics {
       return;
     }
     createRPCRequestCounter(method, OK, tableId).inc(1);
-    updateRpcLatencyMetric(c, method);
+    // updateRpcLatencyMetric(c, method);
   }
 
   /**
@@ -242,7 +242,7 @@ public class BigQuerySinkMetrics {
     }
     String statusCode = throwableToGRPCCodeString(c.getError());
     createRPCRequestCounter(method, statusCode, tableId).inc(1);
-    updateRpcLatencyMetric(c, method);
+    // updateRpcLatencyMetric(c, method);
   }
 
   /**

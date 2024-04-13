@@ -87,7 +87,7 @@ public interface StreamingInsertsMetrics {
    */
   @AutoValue
   abstract class StreamingInsertsMetricsImpl implements StreamingInsertsMetrics {
-    abstract ConcurrentLinkedQueue<java.time.Duration> rpcLatencies();
+    // abstract ConcurrentLinkedQueue<java.time.Duration> rpcLatencies();
 
     abstract ConcurrentLinkedQueue<String> rpcErrorStatus();
     // Represents <Rpc Status, Number of Rows> for rows that are retried because of a failed
@@ -104,7 +104,7 @@ public interface StreamingInsertsMetrics {
 
     public static StreamingInsertsMetricsImpl create() {
       return new AutoValue_StreamingInsertsMetrics_StreamingInsertsMetricsImpl(
-          new ConcurrentLinkedQueue<>(),
+          // new ConcurrentLinkedQueue<>(),
           new ConcurrentLinkedQueue<>(),
           new ConcurrentLinkedQueue<>(),
           new AtomicInteger(),
@@ -126,7 +126,7 @@ public interface StreamingInsertsMetrics {
     public void updateFailedRpcMetrics(Instant start, Instant end, String status) {
       if (isWritable().get()) {
         rpcErrorStatus().add(status);
-        rpcLatencies().add(Duration.between(start, end));
+        // rpcLatencies().add(Duration.between(start, end));
       }
     }
 
@@ -135,7 +135,7 @@ public interface StreamingInsertsMetrics {
     public void updateSuccessfulRpcMetrics(Instant start, Instant end) {
       if (isWritable().get()) {
         successfulRpcsCount().getAndIncrement();
-        rpcLatencies().add(Duration.between(start, end));
+        // rpcLatencies().add(Duration.between(start, end));
       }
     }
 
@@ -157,14 +157,14 @@ public interface StreamingInsertsMetrics {
     }
 
     /** Record rpc latency histogram metrics. */
-    private void recordRpcLatencyMetrics() {
-      Histogram latencyHistogram =
-          BigQuerySinkMetrics.createRPCLatencyHistogram(
-              BigQuerySinkMetrics.RpcMethod.STREAMING_INSERTS);
-      double[] rpcLatencies =
-          rpcLatencies().stream().mapToDouble(duration -> duration.toMillis()).toArray();
-      latencyHistogram.update(rpcLatencies);
-    }
+    // private void recordRpcLatencyMetrics() {
+    //   Histogram latencyHistogram =
+    //       BigQuerySinkMetrics.createRPCLatencyHistogram(
+    //           BigQuerySinkMetrics.RpcMethod.STREAMING_INSERTS);
+    //   double[] rpcLatencies =
+    //       rpcLatencies().stream().mapToDouble(duration -> duration.toMillis()).toArray();
+    //   latencyHistogram.update(rpcLatencies);
+    // }
 
     /**
      * Export all metrics recorded in this instance to the underlying {@code perWorkerMetrics}
@@ -233,7 +233,7 @@ public interface StreamingInsertsMetrics {
             .inc(successfulRowsCount().longValue());
       }
 
-      recordRpcLatencyMetrics();
+      // recordRpcLatencyMetrics();
     }
   }
 }
