@@ -191,7 +191,7 @@ public class BigQuerySinkMetrics {
    * <p>'RpcLatency-Method:{method};'
    *
    * @param method StorageWriteAPI method associated with this metric.
-   * @return Histogram with exponential buckets with a sqrt(2) growth factor.
+   * @return Histogram with exponential buckets with a size 2 growth factor.
    */
   static Histogram createRPCLatencyHistogram(RpcMethod method) {
     NavigableMap<String, String> metricLabels = new TreeMap<String, String>();
@@ -199,7 +199,7 @@ public class BigQuerySinkMetrics {
     String fullMetricName = createLabeledMetricName(RPC_LATENCY, metricLabels);
     MetricName metricName = MetricName.named(METRICS_NAMESPACE, fullMetricName);
 
-    HistogramData.BucketType buckets = HistogramData.ExponentialBuckets.of(1, 34);
+    HistogramData.BucketType buckets = HistogramData.ExponentialBuckets.of(0, 17);
 
     return new DelegatingHistogram(metricName, buckets, false, true);
   }
